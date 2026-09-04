@@ -30,12 +30,18 @@ npm install @puckeditor/plugin-ai @puckeditor/cloud-client
 
 ## Setup
 
-Three files: the descriptor in `astro.config.mjs`, an admin entry that owns your Puck config, and a route that renders the stored document.
+Six steps. The site owns three small files: the admin entry, the Puck config and the render island.
 
-### 1. Register the plugin
+**1. Install**
+
+```bash
+npm install emdash-plugin-puck @puckeditor/core@0.23
+npm install @puckeditor/plugin-ai @puckeditor/cloud-client   # only for Puck AI
+```
+
+**2. Register the plugin** in `astro.config.mjs`
 
 ```js
-// astro.config.mjs
 import emdash from "emdash/astro";
 import puck from "emdash-plugin-puck";
 
@@ -43,44 +49,42 @@ export default defineConfig({
   integrations: [
     emdash({
       plugins: [
-        puck({
-          adminEntry: new URL("./src/puck/admin.tsx", import.meta.url).href,
-        }),
+        puck({ adminEntry: new URL("./src/puck/admin.tsx", import.meta.url).href }),
       ],
     }),
   ],
   vite: {
     optimizeDeps: {
-      // See "optimizeDeps" below. Not optional.
+      // Required. Add "@puckeditor/plugin-ai" if used, and every bare
+      // dependency your blocks import. See "optimizeDeps" below.
       include: ["@puckeditor/core"],
     },
   },
 });
 ```
 
-`adminEntry` is **your** file, not this package's, because the widget needs your Puck config. It must be an absolute URL string: EmDash inlines it verbatim into its generated `virtual:emdash/admin-registry` module, which has no on-disk anchor for a relative path. The plugin is `format: "native"` because it renders React in the admin; that means it is registered here and cannot be installed from the admin UI.
+`adminEntry` is your file (step 3), as an absolute URL string: EmDash inlines it into a generated virtual module that cannot resolve a relative path.
 
-### 2. Write the admin entry
+**3. Write the admin entry** at `src/puck/admin.tsx`
 
 ```tsx
-// src/puck/admin.tsx
 import { createPuckAdmin } from "emdash-plugin-puck/admin";
 import { config } from "./config";
 
 export const { fields } = createPuckAdmin({ config });
 ```
 
-That is the whole file for a site whose blocks need no site CSS in the canvas. Most sites need more; see [Styles in the canvas](#styles-in-the-canvas).
+If your blocks depend on site CSS, add `canvas: { stylesheets: [href], css: "...", colorScheme: "light" }`; see [Styles in the canvas](#styles-in-the-canvas).
 
-### 3. Point a field at the widget
+**4. Write the Puck config** at `src/puck/config.tsx`: a normal Puck `Config` with your blocks. Use `mediaField("Image")` from `emdash-plugin-puck/fields` for image props, and `Editable` from `emdash-plugin-puck/render` for any prop with `contentEditable: true`. See [Writing blocks](#writing-blocks).
 
-A field's `widget` is its own column in `_emdash_fields`, **not** an entry in `options`. The MCP tool `schema_create_field` exposes no `widget` parameter, so `options: { widget: "puck:canvas" }` writes the string to the wrong place and the admin silently keeps its JSON textarea. Set it in the admin UI (the field's settings), in a seed:
+**5. Point a `json` field at the widget.** In a seed:
 
 ```json
 { "slug": "layout", "type": "json", "widget": "puck:canvas" }
 ```
 
-or over the REST API (`PUT`, not `PATCH`):
+Or on an existing field, over the REST API. `widget` is its own column, so it cannot be set through `options`, the `schema_create_field` MCP tool has no parameter for it, and `PATCH` 404s (`PUT` is the verb):
 
 ```bash
 curl -X PUT -H "Authorization: Bearer $EMDASH_API_TOKEN" -H "X-EmDash-Request: 1" \
@@ -88,9 +92,9 @@ curl -X PUT -H "Authorization: Bearer $EMDASH_API_TOKEN" -H "X-EmDash-Request: 1
   http://localhost:4321/_emdash/api/schema/collections/pages/fields/layout
 ```
 
-Confirm it landed by checking `/_emdash/api/manifest`; the admin reads the widget from there.
+`GET /_emdash/api/manifest` (authenticated) shows the widget the admin will use.
 
-### 4. Render the page
+**6. Render the page**
 
 ```tsx
 // src/puck/PuckPage.tsx
@@ -107,8 +111,9 @@ import { getEmDashEntry } from "emdash";
 import { parseLayout } from "emdash-plugin-puck/render";
 import PuckPage from "../puck/PuckPage";
 
-const { entry } = await getEmDashEntry("pages", Astro.params.slug!);
+const { entry, cacheHint } = await getEmDashEntry("pages", Astro.params.slug!);
 if (!entry) return Astro.rewrite("/404");
+if (cacheHint && Astro.cache?.enabled) Astro.cache.set(cacheHint);
 
 const layout = parseLayout(entry.data.layout);
 ---
@@ -121,11 +126,38 @@ const layout = parseLayout(entry.data.layout);
 </Layout>
 ```
 
-`client:load` is deliberate. Calling Puck's `<Render>` from `.astro` with no directive ships zero JavaScript, which is right for prose blocks and wrong for any section with state or handlers, and Astro cannot put a client directive on a component nested inside `<Render>`. So the whole document is one island: server-rendered first (every heading and link is in the HTML), then hydrated in place. The config cannot be an island prop because it holds React components and Astro serialises props to JSON; that is what `createPuckPage` exists to work around.
+`client:load` is required: the whole document is one island that server-renders first and then hydrates. The config cannot be an island prop (it holds React components), which is what `createPuckPage` is for. Any block module that touches `window` at module scope must use a dynamic `import()`.
 
-The rule this imposes on blocks: everything in the tree is evaluated on the server, so a module that touches `window` at module scope must be reached through a dynamic `import()`.
+**Optional: Puck AI.** Add `puckAi()` to the admin entry, a route, and the key:
 
-`parseLayout` accepts an object or a JSON string (EmDash's loader parses values that start with `{` or `[`, but a driver handing back the raw column still gives a string), returns `null` for anything empty or malformed, and takes a `transform` for rewriting the parsed document, for instance stored media URLs to a CDN.
+```tsx
+// src/puck/admin.tsx
+import { puckAi } from "emdash-plugin-puck/ai";
+const ai = puckAi(); // module scope
+export const { fields } = createPuckAdmin({ config, ...ai });
+```
+
+```ts
+// src/pages/api/puck/[...all].ts   (path fixed by Puck's client)
+import { createPuckAiHandler } from "emdash-plugin-puck/ai/handler";
+const handler = createPuckAiHandler({ context: "You write pages for ..." });
+export const GET = handler;
+export const POST = handler;
+export const DELETE = handler;
+```
+
+Set `PUCK_API_KEY` in the environment. See [Puck AI](#puck-ai), including the second island needed for design mode.
+
+**Verify**
+
+1. `astro check` and `astro build` pass.
+2. Open the admin, edit an entry: the field shows "Edit layout", the overlay opens with your blocks listed, save writes `{ root, content }` to the field.
+3. The public route renders the page, and the browser console shows no `[puck]` boundary errors.
+4. If the admin sits on "Loading EmDash…", a dependency is missing from `optimizeDeps.include` (check the console for a failed `PluginRegistry` import).
+
+### Migrating from an inline plugin
+
+If the site carries an earlier copy of this code under `src/plugins/puck/`: delete `index.ts`, `BlockPanel.tsx` and `puck-theme.css`; replace the descriptor in `astro.config.mjs` with `puck({ adminEntry })`; reduce `admin.tsx` to the `createPuckAdmin` call above, passing the stylesheets it used to inject as `canvas` / `blockPanel` options; replace local `PuckPage.tsx` / `PuckPageDesigned.tsx`, `boundaries.tsx`, `ErrorBoundary.tsx`, `editable.ts` and `fields/media.tsx` with the package exports; and reduce the AI route to `createPuckAiHandler`, keeping only the site's `context` and `designMode.instructions`.
 
 ## Styles in the canvas
 
