@@ -1,0 +1,108 @@
+{
+	"name": "emdash-plugin-puck",
+	"version": "0.1.0",
+	"description": "The Puck visual editor as an EmDash field widget: edit any json field as a page layout, render it on the public site, pick images from the EmDash media library, and optionally wire up Puck AI.",
+	"type": "module",
+	"license": "MIT",
+	"author": "Marko Stankovic",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/markoinla/emdash-plugin-puck.git"
+	},
+	"homepage": "https://github.com/markoinla/emdash-plugin-puck#readme",
+	"bugs": "https://github.com/markoinla/emdash-plugin-puck/issues",
+	"keywords": [
+		"emdash",
+		"emdash-plugin",
+		"puck",
+		"puckeditor",
+		"page-builder",
+		"visual-editor",
+		"cms",
+		"astro"
+	],
+	"main": "dist/index.js",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./admin": {
+			"types": "./dist/admin.d.ts",
+			"import": "./dist/admin.js"
+		},
+		"./ai": {
+			"types": "./dist/ai/index.d.ts",
+			"import": "./dist/ai/index.js"
+		},
+		"./ai/handler": {
+			"types": "./dist/ai/handler.d.ts",
+			"import": "./dist/ai/handler.js"
+		},
+		"./render": {
+			"types": "./dist/render/index.d.ts",
+			"import": "./dist/render/index.js"
+		},
+		"./render/designed": {
+			"types": "./dist/render/designed.d.ts",
+			"import": "./dist/render/designed.js"
+		},
+		"./fields": {
+			"types": "./dist/fields.d.ts",
+			"import": "./dist/fields.js"
+		},
+		"./theme.css": "./dist/theme.css",
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"CHANGELOG.md"
+	],
+	"sideEffects": [
+		"**/*.css"
+	],
+	"scripts": {
+		"build": "tsdown && cp src/theme.css dist/theme.css",
+		"dev": "tsdown --watch",
+		"typecheck": "tsc --noEmit",
+		"prepublishOnly": "npm run typecheck && npm run build"
+	},
+	"peerDependencies": {
+		"@puckeditor/cloud-client": "^0.8.0",
+		"@puckeditor/core": "^0.23.0",
+		"@puckeditor/plugin-ai": "^0.8.0",
+		"astro": "^5.0.0 || ^6.0.0 || ^7.0.0",
+		"emdash": ">=0.35.0 <0.37.0",
+		"react": "^18.0.0 || ^19.0.0",
+		"react-dom": "^18.0.0 || ^19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@puckeditor/cloud-client": {
+			"optional": true
+		},
+		"@puckeditor/plugin-ai": {
+			"optional": true
+		},
+		"astro": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@puckeditor/cloud-client": "^0.8.2",
+		"@puckeditor/core": "0.23.0",
+		"@puckeditor/plugin-ai": "^0.8.2",
+		"@types/node": "^22.0.0",
+		"@types/react": "^18.3.27",
+		"@types/react-dom": "^18.3.7",
+		"astro": "^7.0.0",
+		"emdash": "^0.36.0",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"tsdown": "^0.23.0",
+		"typescript": "^6.0.0"
+	},
+	"engines": {
+		"node": ">=22.12.0"
+	}
+}

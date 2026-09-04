@@ -1,0 +1,34 @@
+# Publishes to npm when a `v*` tag is pushed.
+#
+# Uses npm trusted publishing (OIDC), so no NPM_TOKEN secret is needed. One-time
+# setup on npmjs.com: package settings -> Trusted publishers -> GitHub Actions,
+# repository `markoinla/emdash-plugin-puck`, workflow `release.yml`. The first
+# publish of a brand-new package name still has to be done by hand
+# (`npm publish --access public`) before a trusted publisher can be attached.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Check the tag matches package.json
+        run: |
+          test "v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - run: npm publish --access public --provenance

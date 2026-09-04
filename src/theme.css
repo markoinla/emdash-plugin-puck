@@ -1,0 +1,261 @@
+/*
+  puck-theme.css -- aliases Puck 0.23's design tokens onto the EmDash
+  admin's design system, so the page builder's chrome reads as part of
+  the CMS instead of a bolted-on third-party editor.
+
+  WHY THIS FILE HAS NO @layer. Puck declares every one of its own
+  --puck-* tokens inside a cascade layer:
+
+    @layer puck-tokens { :root { --puck-color-surface: ...; } }
+
+  (see node_modules/@puckeditor/core/dist/index.css). Unlayered
+  declarations beat layered ones at any specificity, so a plain,
+  unlayered `:root { ... }` here wins outright. That is the entire
+  mechanism. Do NOT "fix" this into an @layer, do NOT reach for
+  !important, and do NOT copy the `.Container { ... }` selector the
+  Puck docs show in their theming examples -- it is written for people
+  who are scoping a theme to one editor instance, and adopting it here
+  buys nothing but a specificity war. If a token below stops applying,
+  the cause is another unlayered rule, not this one.
+
+  WHY THIS GIVES US DARK MODE FOR FREE. Puck ships no dark mode at all:
+  its stylesheet contains zero prefers-color-scheme and zero
+  color-scheme declarations, and every default is a literal hex. The
+  EmDash admin is built on Cloudflare Kumo, whose tokens are declared
+  on `:root,:host` as light-dark(<light>, <dark>) and resolved by
+  color-scheme, which the admin flips with data-mode="light|dark" on
+  <html>. So aliasing --puck-* to var(--color-kumo-*) is one
+  declaration per token and both modes follow automatically. There is
+  no second palette in this file, and there must never be one -- if you
+  find yourself writing a prefers-color-scheme block here, you have
+  picked a raw value where a Kumo token belonged.
+
+  SCOPE. This maps Puck's ~30 global colour tokens plus the UI font.
+  Puck's component-level tokens (--puck-header-*, --puck-sidebar-*,
+  --puck-drawer-*, --puck-field-*, --puck-button-*, --puck-outline-*,
+  --puck-pluginbar-*, --puck-slot-*, --puck-canvas-*, --puck-iconbutton-*,
+  --puck-actionbar-*) all default to var(--puck-color-...), so they
+  inherit these mappings without being listed. Only the component
+  overrides appear at the bottom, each because the global mapping
+  produces a genuinely wrong result there.
+
+  Spacing, radius, motion, border-width and icon-size are deliberately
+  untouched. Puck's defaults are sane and Kumo has no direct
+  equivalents, so overriding them would be invention, not alignment.
+
+  Reference: https://puckeditor.com/docs/api-reference/theming/global
+  Kumo token source: node_modules/@emdash-cms/admin/node_modules/
+    @cloudflare/kumo/dist/styles/theme-kumo.css
+*/
+
+:root {
+	/*
+	  Surfaces. Kumo's ladder is canvas (page ground) < elevated (chrome)
+	  < base (panels) < control (form controls), with recessed as the
+	  inset step. Puck's surface tokens slot onto it directly.
+	*/
+	--puck-color-surface: var(--color-kumo-base);
+	--puck-color-surface-muted: var(--color-kumo-recessed);
+	--puck-color-surface-subtle: var(--color-kumo-elevated);
+	--puck-color-surface-inverse: var(--color-kumo-contrast);
+
+	/* Borders. */
+	--puck-color-border: var(--color-kumo-line);
+	--puck-color-border-hover: var(--color-kumo-interact);
+	--puck-color-border-muted: var(--color-kumo-hairline);
+	/*
+	  Kumo has no inverse-surface border token, so derive one from the
+	  text colour that already sits on --color-kumo-contrast. Doing it
+	  this way keeps the divider correct in both modes: the contrast
+	  surface is near-black in light and near-white in dark, and
+	  --text-color-kumo-inverse flips with it. A fixed grey would be
+	  invisible in one mode or the other.
+	*/
+	--puck-color-border-inverse: color-mix(in srgb, var(--text-color-kumo-inverse) 35%, transparent);
+
+	/*
+	  Text. Puck has six steps, Kumo has five, so --puck-color-text-muted
+	  reuses -subtle and --puck-color-text-disabled reuses -placeholder.
+	  That is intentional: both pairs are the same semantic weight in the
+	  admin, and inventing an in-between grey would drift from it.
+	  --text-color-kumo-strong is left unused because Puck has no
+	  separate heading colour token.
+	*/
+	--puck-color-text: var(--text-color-kumo-default);
+	--puck-color-text-secondary: var(--text-color-kumo-subtle);
+	--puck-color-text-muted: var(--text-color-kumo-subtle);
+	--puck-color-text-subtle: var(--text-color-kumo-placeholder);
+	--puck-color-text-inverse: var(--text-color-kumo-inverse);
+
+	/*
+	  Interactive. Deliberately NEUTRAL, not brand blue.
+
+	  --color-kumo-contrast is Kumo's high-contrast foreground: near-white
+	  in dark mode, near-black in light. Puck spends --puck-color-interactive
+	  on a lot of surfaces at once -- plugin bar selected AND hover text,
+	  outline hover, drawer category and item hover, field active text,
+	  icon button hover and active icons, and the primary button
+	  background -- so a brand-blue value here scattered blue accents
+	  through chrome that is otherwise monochrome, and they read as
+	  belonging to a different product.
+
+	  Neutral is also the house pattern already: the site's own shadcn
+	  --primary in src/styles/globals.css is near-black in light and
+	  near-white in dark, exactly this ladder.
+
+	  --color-kumo-brand is still EmDash's blue and is intentionally NOT
+	  used here. Separately, Kumo ships an ORANGE --text-color-kumo-brand
+	  that EmDash does not use for surfaces; never reach for that one.
+	*/
+	--puck-color-interactive: var(--color-kumo-contrast);
+	/*
+	  Hover and pressed have to step INWARD, toward the panel surface.
+	  There is nothing beyond full contrast to escalate to, so the ladder
+	  runs selected/hover (full contrast) > pressed (softened), rather
+	  than the usual outward progression a brand colour allows.
+	*/
+	--puck-color-interactive-hover: color-mix(in oklch, var(--color-kumo-contrast) 82%, var(--color-kumo-base));
+	--puck-color-interactive-active: color-mix(in oklch, var(--color-kumo-contrast) 66%, var(--color-kumo-base));
+
+	/*
+	  Tinted interactive backgrounds -- the wash behind an active field
+	  chip, a selected drawer category, the active plugin bar tab.
+
+	  Mixed off --color-kumo-contrast, so they come out as neutral greys
+	  that darken in light mode and lighten in dark. Mixing off brand
+	  instead is what put a blue cast behind selected radio options like
+	  the page-chrome toggle.
+
+	  The three percentages preserve Puck's own ordering: -subtle is the
+	  most tinted, then -soft (secondary buttons), then -soft-hover (row
+	  hover), which is the faintest by Puck's design.
+	*/
+	--puck-color-interactive-subtle: color-mix(in oklch, var(--color-kumo-contrast) 14%, var(--color-kumo-base));
+	--puck-color-interactive-soft: color-mix(in oklch, var(--color-kumo-contrast) 8%, var(--color-kumo-base));
+	--puck-color-interactive-soft-hover: color-mix(in oklch, var(--color-kumo-contrast) 5%, var(--color-kumo-base));
+	/* Icon button hover: Kumo's resting neutral chip is the right weight for a hover-only fill. */
+	--puck-color-interactive-neutral-hover: var(--color-kumo-fill);
+
+	/*
+	  Interactive states on the inverse (action bar) surface. That bar
+	  inverts against the rest of the UI, so --color-kumo-contrast is the
+	  WRONG direction here: it would match the bar instead of standing
+	  out from it. These key off --text-color-kumo-inverse, which is
+	  already the correct foreground for that surface in both modes, and
+	  step inward from it for the pressed state.
+	*/
+	--puck-color-interactive-inverse-hover: var(--text-color-kumo-inverse);
+	--puck-color-interactive-inverse-active: color-mix(in oklch, var(--text-color-kumo-inverse) 72%, var(--color-kumo-contrast));
+
+	/*
+	  Focus. Kumo's focus ring is a near-black/near-white outline, not a
+	  blue one. That looks wrong next to Puck's default until you
+	  remember the point of this file is to match the admin, where every
+	  other focus ring is this colour. Leave it neutral.
+	*/
+	--puck-color-focus-ring: var(--color-kumo-focus);
+
+	/* Selection, drop zones and the drag insertion line. */
+	--puck-color-selection-bg: color-mix(in oklch, var(--color-kumo-brand) 18%, transparent);
+	--puck-color-selection-border: color-mix(in oklch, var(--color-kumo-brand) 50%, var(--color-kumo-base));
+	--puck-color-line-placeholder: var(--color-kumo-brand);
+
+	/*
+	  --puck-color-highlight is deliberately left unmapped. Puck
+	  documents it as "accent color scale step, not currently consumed",
+	  so it paints nothing today and picking a Kumo token for it would
+	  be a guess recorded as a decision. Map it if Puck ever starts
+	  using it.
+	*/
+
+	/* Disabled. Kumo's neutral chip plus its placeholder text weight. */
+	--puck-color-bg-disabled: var(--color-kumo-fill);
+	--puck-color-text-disabled: var(--text-color-kumo-placeholder);
+
+	/*
+	  Modal backdrop. --color-kumo-neutral-1000 is a raw ramp step, not
+	  a light-dark() pair, so it stays near-black in both modes. That is
+	  correct here: a backdrop that inverted with the theme would wash
+	  the app out in dark mode. The literal fallback mirrors how Kumo
+	  references its own ramp steps: the step is declared in the admin's
+	  shipped bundle rather than in theme-kumo.css, so it is the one
+	  reference here that is worth defending.
+	*/
+	--puck-color-overlay-backdrop: color-mix(
+		in srgb,
+		var(--color-kumo-neutral-1000, oklch(10% 0 0)) 70%,
+		transparent
+	);
+
+	/*
+	  Typography. --font-emdash is set by the host app, and the admin
+	  itself always consumes it with this exact fallback stack, so we
+	  repeat it rather than inventing a different one. The monospaced
+	  token is left at Puck's default because the admin has no
+	  equivalent worth aliasing to.
+	*/
+	--puck-font-family: var(
+		--font-emdash,
+		ui-sans-serif,
+		system-ui,
+		sans-serif,
+		"Apple Color Emoji",
+		"Segoe UI Emoji",
+		"Segoe UI Symbol",
+		"Noto Color Emoji"
+	);
+
+	/*
+	  Component-level overrides. Everything else follows from the global
+	  tokens above; the entries below do not, and each is here for a stated
+	  reason.
+	*/
+
+	/*
+	  1. The canvas gutter defaults to --puck-color-surface-muted, which
+	  we mapped to Kumo's inset surface. The gutter is not an inset, it
+	  is the page ground, and it needs to read as distinct from the
+	  panels floating on it.
+
+	  WHY THE NESTED light-dark(). Neither Kumo surface works in both
+	  modes on its own. These are values READ OUT OF THE RUNNING ADMIN,
+	  not the fallbacks written in theme-kumo.css -- the admin overrides
+	  some of them, and --color-kumo-recessed in particular resolves far
+	  darker in light mode than its own `oklch(96%)` fallback suggests:
+
+	                          light            dark
+	    --color-kumo-canvas   oklch(0.9875)    oklch(0.10)
+	    --color-kumo-recessed rgb(220,220,222) oklch(0.15)
+	    panels (kumo-base)    #ffffff          oklch(0.17)
+
+	  Canvas alone leaves the light-mode gutter within about 1% of the
+	  white panels sitting on it, and the editor reads visibly flat
+	  (stock Puck separates the two by roughly 4%). Recessed alone
+	  collapses the dark ladder from 7 points to 2. Picking per mode
+	  gives the gutter real separation in both.
+
+	  If you retune this, check it in BOTH modes in a browser rather than
+	  reasoning from the token names. The fallback values in Kumo's own
+	  stylesheet are not what the admin actually serves.
+
+	  This nests safely: the outer light-dark() selects one argument by
+	  color-scheme, and the Kumo token inside it is itself a light-dark()
+	  that resolves to its own matching half. Light takes recessed's
+	  light value, dark takes canvas's dark value.
+	*/
+	--puck-canvas-color-bg: light-dark(var(--color-kumo-recessed), var(--color-kumo-canvas));
+
+	/*
+	  NOT AN OVERRIDE, A DELIBERATE ABSENCE. Do not pin
+	  --puck-button-primary-color-text to #ffffff here.
+
+	  While the primary button was brand blue it needed one: blue stays
+	  blue in both modes, so its label had to stay light, but the token
+	  it inherits from (--puck-color-text-inverse) flips to near-black in
+	  dark mode. Now that --puck-color-interactive is --color-kumo-contrast,
+	  the button background flips too -- near-black in light, near-white
+	  in dark -- and --text-color-kumo-inverse is its exact opposite in
+	  both modes. The inherited default is correct, and a white pin would
+	  be white-on-white in dark mode.
+	*/
+}
