@@ -26,6 +26,7 @@ export default defineConfig({
 		"render/index": "src/render/index.tsx",
 		"render/designed": "src/render/designed.tsx",
 		fields: "src/fields/media.tsx",
+		"blocks/index": "src/blocks/index.tsx",
 	},
 	format: "esm",
 	dts: true,

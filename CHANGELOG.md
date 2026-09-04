@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+- `emdash-plugin-puck/blocks`: `createBlocks()`, a starter kit of ten
+  composable blocks (Grid, Flex, Space, Heading, Text, Prose, Card, Stats,
+  Logos, Button) ported from Puck's demo app, with parent-aware layout
+  controls, inline editing, closed token selects and Puck AI instructions.
+  Site hooks: `icons`, `resolveHref`, `disallow`, `buttonActions`,
+  `buttonClassName`, `options`.
+- `emdash-plugin-puck/blocks.css`: the kit stylesheet, reading `--zk-*`
+  variables with fallbacks to conventional site tokens and literals.
+
 ## 0.1.0
 
 Initial release, extracted from the Zenlayer marketing CMS where it ran in

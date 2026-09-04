@@ -8,6 +8,7 @@ It registers one field widget, `puck:canvas`, that takes over any `json` field a
 - A searchable block panel with live hover previews, rendered from each block's real `defaultProps`
 - Puck's chrome themed onto the EmDash admin's design tokens, so it follows the admin's light and dark mode
 - `mediaField()`: the EmDash media library (browse, search, upload) as a Puck field
+- A starter kit of ten composable blocks (Grid, Flex, Space, Heading, Text, Prose, Card, Stats, Logos, Button), ported from Puck's demo app
 - Public rendering with per-section error boundaries, so one broken block costs one section and not the page
 - Optional Puck AI: the chat panel in the editor, plus the authenticated Puck Cloud route behind it
 
@@ -78,7 +79,22 @@ export const { fields } = createPuckAdmin({ config });
 
 If your blocks depend on site CSS, add `canvas: { stylesheets: [href], css: "...", colorScheme: "light" }`; see [Styles in the canvas](#styles-in-the-canvas).
 
-**4. Write the Puck config** at `src/puck/config.tsx`: a normal Puck `Config` with your blocks. Use `mediaField("Image")` from `emdash-plugin-puck/fields` for image props, and `Editable` from `emdash-plugin-puck/render` for any prop with `contentEditable: true`. See [Writing blocks](#writing-blocks).
+**4. Write the Puck config** at `src/puck/config.tsx`. The quickest start is the bundled kit:
+
+```tsx
+import type { Config } from "@puckeditor/core";
+import { createBlocks } from "emdash-plugin-puck/blocks";
+import "emdash-plugin-puck/blocks.css";
+
+const kit = createBlocks();
+
+export const config: Config = {
+  categories: { ...kit.categories },
+  components: { ...kit.components },
+};
+```
+
+Add your own blocks beside them. Use `mediaField("Image")` from `emdash-plugin-puck/fields` for image props, and `Editable` from `emdash-plugin-puck/render` for any prop with `contentEditable: true`. See [Starter blocks](#starter-blocks) and [Writing blocks](#writing-blocks).
 
 **5. Point a `json` field at the widget.** In a seed:
 
@@ -199,6 +215,38 @@ Also on by default: `unlockScroll`. Puck pins the canvas body with inline `overf
 
 The block panel's preview iframe takes the same styles by default; pass `blockPanel: { ... }` to override, or `blockPanel: false` to keep Puck's stock drawer.
 
+## Starter blocks
+
+`emdash-plugin-puck/blocks` ships ten composable blocks in two categories: **Layout** (Grid, Flex, Space) and **Content** (Heading, Text, Prose, Card, Stats, Logos, Button). Every block carries a parent-aware `layout` field (column span inside a Grid, grow inside a Flex, vertical padding elsewhere), inline-editable copy, closed token selects instead of free numbers, and Puck AI instructions.
+
+```tsx
+const kit = createBlocks({
+  // Card icons: a closed vocabulary you supply. Without it the Card has no icon field.
+  icons: { options: [{ label: "Globe", value: "globe" }], render: (key) => <Icon name={key} /> },
+  // Rewrite author-typed hrefs (a base path, say). Default: identity.
+  resolveHref: withBase,
+  // Your own full-width sections, which must not be dropped inside a Grid or Flex cell.
+  disallow: ["Hero", "Footer"],
+  // Extra Button actions beside "Go to a link". Picking one hides the href field.
+  buttonActions: [{ value: "contact", label: "Open contact form", onClick: openDrawer }],
+  // Wear the site's own button classes instead of the package's `zk-btn`.
+  buttonClassName: (variant, size) => `btn btn-${variant}${size === "large" ? " btn-lg" : ""}`,
+  // Replace the spacing, gap or width scales.
+  options: { maxWidth: [{ label: "Wide", value: "1200px" }] },
+});
+```
+
+**The stylesheet loads in three places.** `import "emdash-plugin-puck/blocks.css"` from your config puts it on the public page and on the admin document, which Puck copies into the canvas. The block panel's preview iframe is a separate document, so also pass it raw in the admin entry:
+
+```tsx
+import blocksCss from "emdash-plugin-puck/blocks.css?raw";
+export const { fields } = createPuckAdmin({ config, blockPanel: { css: blocksCss } });
+```
+
+**Styling.** Every colour, size and radius in `blocks.css` reads a `--zk-*` variable, then a conventional site token (`--color-text`, `--color-brand`, `--font-size-lg`, `--site-radius`), then a literal. A site that already declares those tokens gets its own look with no configuration; any site can retune the blocks by declaring `--zk-*` on `:root`; a bare site is still presentable. The classes are plain (`zk-grid`, `zk-card`) rather than CSS modules because the preview iframe receives the sheet as raw text.
+
+**The registry keys must stay `Grid` and `Flex`.** The layout field narrows itself by the parent's registry name, so renaming either loses the span and grow controls.
+
 ## Media
 
 Replace the plain URL text box on every image prop:
@@ -312,6 +360,8 @@ Things the editor's iframe changes about ordinary React:
 | `createPuckPage`, `parseLayout`, `hasDesignedComponents`, `isPuckData`, `EMPTY_DATA`, `withBoundaries`, `ErrorBoundary`, `BlockErrorBoundary`, `PageErrorBoundary`, `renderable`, `Editable` | `emdash-plugin-puck/render` |
 | `createPuckPageDesigned` | `emdash-plugin-puck/render/designed` |
 | `mediaField` | `emdash-plugin-puck/fields` |
+| `createBlocks`, `withLayout`, `Section`, the option lists and block prop types | `emdash-plugin-puck/blocks` |
+| the starter block styles | `emdash-plugin-puck/blocks.css` |
 | the admin theme | `emdash-plugin-puck/theme.css` |
 
 `createPuckAdmin` options: `config`, `emptyData`, `plugins`, `resolveConfig`, `canvas` (`stylesheets`, `css`, `colorScheme`, `unlockScroll`), `blockPanel` (preview styles, `previewWidth`, `previewScale`, or `false`), `adminStylesheets`, `overrides`, `labels`.

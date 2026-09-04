@@ -1,0 +1,352 @@
+/**
+ * Stylesheet for the starter blocks (emdash-plugin-puck/blocks).
+ *
+ * PLAIN CLASSES, NOT CSS MODULES. The block panel builds its preview iframe by
+ * injecting stylesheets as raw text, and a module's hashed class names would
+ * not survive that. One sheet renders the same on the page, the canvas and
+ * the drawer preview. Load it in three places: import it from your Puck
+ * config (public page and admin document, which Puck copies into the canvas),
+ * and pass it `?raw` as `blockPanel.css` in the admin entry.
+ *
+ * NO --puck-* VARIABLES. Those are defined by puck.css, which loads in the
+ * admin and nowhere else, so each would resolve to nothing on a public page.
+ *
+ * TOKENS WITH FALLBACKS. Every colour, size and radius reads a `--zk-*`
+ * variable first, then a conventional site token (`--color-text`,
+ * `--font-size-lg`, ...), then a literal. A site that already declares those
+ * tokens gets its own look with no configuration; any site can retune the
+ * blocks by declaring `--zk-*` on :root; a bare site is still presentable.
+ */
+
+/* ---------------------------------------------------------------- */
+/* Section: the measure every block renders inside                   */
+/* ---------------------------------------------------------------- */
+
+.zk-section:not(.zk-section .zk-section) {
+	padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+	.zk-section:not(.zk-section .zk-section) {
+		padding-inline: 1.5rem;
+	}
+}
+
+.zk-section-inner {
+	margin-inline: auto;
+	width: 100%;
+	height: 100%;
+}
+
+/* A nested block fills the cell it was given rather than re-centring in it. */
+.zk-section .zk-section .zk-section-inner {
+	margin-inline: 0;
+}
+
+.zk-layout {
+	display: block;
+}
+
+/* ---------------------------------------------------------------- */
+/* Layout blocks                                                     */
+/* ---------------------------------------------------------------- */
+
+/* Single column below 768px, the author's column count above it. */
+.zk-grid {
+	display: flex;
+	flex-direction: column;
+	width: auto;
+}
+
+@media (min-width: 768px) {
+	.zk-grid {
+		display: grid;
+	}
+}
+
+.zk-flex {
+	display: flex;
+	height: 100%;
+}
+
+.zk-space {
+	display: block;
+	height: var(--zk-size);
+	width: var(--zk-size);
+}
+
+.zk-space--vertical {
+	width: 100%;
+}
+
+.zk-space--horizontal {
+	height: 100%;
+	width: var(--zk-size);
+}
+
+/* ---------------------------------------------------------------- */
+/* Typography                                                        */
+/* ---------------------------------------------------------------- */
+
+.zk-heading {
+	margin: 0;
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+	font-weight: var(--zk-font-weight-heading, var(--font-weight-heading, 700));
+	line-height: 1.15;
+	text-wrap: balance;
+}
+
+.zk-heading--xs { font-size: var(--zk-font-size-lg, var(--font-size-lg, 1.125rem)); }
+.zk-heading--s  { font-size: var(--zk-font-size-xl, var(--font-size-xl, 1.25rem)); }
+.zk-heading--m  { font-size: var(--zk-font-size-2xl, var(--font-size-2xl, 1.5rem)); }
+.zk-heading--l  { font-size: var(--zk-font-size-3xl, var(--font-size-3xl, 1.875rem)); }
+.zk-heading--xl { font-size: var(--zk-font-size-4xl, var(--font-size-4xl, 2.25rem)); }
+
+.zk-heading--xxl {
+	font-size: var(--zk-font-size-5xl, var(--font-size-5xl, 3rem));
+	font-weight: var(--zk-font-weight-display, var(--font-weight-display, 800));
+	letter-spacing: -0.02em;
+}
+
+.zk-text {
+	margin: 0;
+	line-height: 1.6;
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+}
+
+.zk-text--s { font-size: var(--zk-font-size-sm, var(--font-size-sm, 0.875rem)); }
+.zk-text--m { font-size: var(--zk-font-size-base, var(--font-size-base, 1rem)); }
+.zk-text--l { font-size: var(--zk-font-size-lg, var(--font-size-lg, 1.125rem)); }
+
+.zk-text--muted {
+	color: var(--zk-color-muted, var(--color-muted, #64748b));
+}
+
+/*
+ * Prose ships stored HTML, so its children cannot be classed and are styled by
+ * element. Kept to the tags the Prose field's deny list actually permits.
+ */
+.zk-prose {
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+	font-size: var(--zk-font-size-base, var(--font-size-base, 1rem));
+	line-height: 1.7;
+}
+
+.zk-prose > * + * {
+	margin-top: 1rem;
+}
+
+.zk-prose a {
+	color: var(--zk-color-brand, var(--color-brand, #2563eb));
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.zk-prose a:hover {
+	color: var(--zk-color-brand-hover, var(--color-brand-hover, #1d4ed8));
+}
+
+.zk-prose ul,
+.zk-prose ol {
+	padding-inline-start: 1.25rem;
+	list-style-position: outside;
+}
+
+.zk-prose ul { list-style-type: disc; }
+.zk-prose ol { list-style-type: decimal; }
+
+.zk-prose li + li {
+	margin-top: 0.375rem;
+}
+
+/* ---------------------------------------------------------------- */
+/* Elements                                                          */
+/* ---------------------------------------------------------------- */
+
+.zk-button {
+	width: 100%;
+}
+
+/*
+ * Default button styles, used when `createBlocks` is not given a
+ * `buttonClassName`. A site with its own button classes passes those instead
+ * and these rules never match.
+ */
+.zk-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 0.625rem 1.25rem;
+	border-radius: var(--zk-radius, var(--site-radius, 0.5rem));
+	border: 1px solid transparent;
+	font: inherit;
+	font-size: var(--zk-font-size-sm, var(--font-size-sm, 0.875rem));
+	font-weight: 600;
+	line-height: 1.25;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.zk-btn--lg {
+	padding: 0.875rem 1.75rem;
+	font-size: var(--zk-font-size-base, var(--font-size-base, 1rem));
+}
+
+.zk-btn--primary {
+	background: var(--zk-color-brand, var(--color-brand, #2563eb));
+	color: var(--zk-color-on-brand, var(--color-on-brand, #ffffff));
+}
+
+.zk-btn--primary:hover {
+	background: var(--zk-color-brand-hover, var(--color-brand-hover, #1d4ed8));
+}
+
+.zk-btn--secondary {
+	background: transparent;
+	border-color: var(--zk-color-border, var(--color-border, #e2e8f0));
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+}
+
+.zk-btn--secondary:hover {
+	border-color: var(--zk-color-brand, var(--color-brand, #2563eb));
+	color: var(--zk-color-brand, var(--color-brand, #2563eb));
+}
+
+.zk-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	height: 100%;
+}
+
+.zk-card--card {
+	background: var(--zk-color-bg, var(--color-bg, #ffffff));
+	border: 1px solid var(--zk-color-border, var(--color-border, #e2e8f0));
+	border-radius: var(--zk-radius-lg, var(--site-radius-lg, 1rem));
+	box-shadow: var(--zk-shadow-sm, var(--site-shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06)));
+	padding: 1.5rem;
+}
+
+.zk-card--center {
+	align-items: center;
+	text-align: center;
+}
+
+.zk-card-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: var(--zk-radius, var(--site-radius, 0.625rem));
+	background: var(--zk-color-brand-tint, var(--color-brand-tint, #dbeafe));
+	color: var(--zk-color-brand, var(--color-brand, #2563eb));
+}
+
+.zk-card-title {
+	margin: 0;
+	font-size: var(--zk-font-size-xl, var(--font-size-xl, 1.25rem));
+	font-weight: var(--zk-font-weight-heading, var(--font-weight-heading, 700));
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+	line-height: 1.25;
+}
+
+.zk-card-body {
+	margin: 0;
+	font-size: var(--zk-font-size-sm, var(--font-size-sm, 0.875rem));
+	line-height: 1.6;
+	color: var(--zk-color-muted, var(--color-muted, #64748b));
+}
+
+/* Pushed to the bottom so links line up across cards of unequal height. */
+.zk-card-link {
+	margin-top: auto;
+	padding-top: 0.5rem;
+	font-size: var(--zk-font-size-sm, var(--font-size-sm, 0.875rem));
+	font-weight: 600;
+	color: var(--zk-color-brand, var(--color-brand, #2563eb));
+	text-decoration: none;
+}
+
+.zk-card-link:hover {
+	color: var(--zk-color-brand-hover, var(--color-brand-hover, #1d4ed8));
+	text-decoration: underline;
+}
+
+.zk-stats {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 2rem;
+	border-radius: var(--zk-radius-lg, var(--site-radius-lg, 1rem));
+	padding: 2.5rem 1.5rem;
+}
+
+@media (min-width: 768px) {
+	.zk-stats {
+		padding: 3.5rem 2.5rem;
+	}
+}
+
+.zk-stats--brand {
+	background: linear-gradient(
+		135deg,
+		var(--zk-color-brand-deep, var(--color-brand-deep, #1e3a8a)),
+		var(--zk-color-brand, var(--color-brand, #2563eb))
+	);
+	color: var(--zk-color-on-brand, var(--color-on-brand, #ffffff));
+}
+
+.zk-stats--plain {
+	background: var(--zk-color-surface, var(--color-surface, #f8fafc));
+	border: 1px solid var(--zk-color-border, var(--color-border, #e2e8f0));
+	color: var(--zk-color-text, var(--color-text, #0f172a));
+	padding-inline: 2rem;
+}
+
+.zk-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	text-align: center;
+}
+
+.zk-stat-value {
+	font-size: var(--zk-font-size-4xl, var(--font-size-4xl, 2.25rem));
+	font-weight: var(--zk-font-weight-display, var(--font-weight-display, 800));
+	line-height: 1;
+}
+
+.zk-stat-label {
+	font-size: var(--zk-font-size-sm, var(--font-size-sm, 0.875rem));
+	font-weight: 600;
+	opacity: 0.8;
+}
+
+.zk-logos {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 2.5rem;
+	padding-block: 2rem;
+}
+
+.zk-logo {
+	height: 40px;
+	width: auto;
+	max-width: 160px;
+	object-fit: contain;
+}
+
+.zk-logos--grayscale .zk-logo {
+	filter: grayscale(1);
+	opacity: 0.7;
+	transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.zk-logos--grayscale .zk-logo:hover {
+	filter: none;
+	opacity: 1;
+}

@@ -1,6 +1,6 @@
 {
 	"name": "emdash-plugin-puck",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "The Puck visual editor as an EmDash field widget: edit any json field as a page layout, render it on the public site, pick images from the EmDash media library, and optionally wire up Puck AI.",
 	"type": "module",
 	"license": "MIT",
@@ -51,6 +51,11 @@
 			"types": "./dist/fields.d.ts",
 			"import": "./dist/fields.js"
 		},
+		"./blocks": {
+			"types": "./dist/blocks/index.d.ts",
+			"import": "./dist/blocks/index.js"
+		},
+		"./blocks.css": "./dist/blocks.css",
 		"./theme.css": "./dist/theme.css",
 		"./package.json": "./package.json"
 	},
@@ -63,7 +68,7 @@
 		"**/*.css"
 	],
 	"scripts": {
-		"build": "tsdown && cp src/theme.css dist/theme.css",
+		"build": "tsdown && cp src/theme.css src/blocks.css dist/",
 		"dev": "tsdown --watch",
 		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "npm run typecheck && npm run build"
