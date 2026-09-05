@@ -14,7 +14,6 @@ It registers one field widget, `puck:canvas`, that takes over any `json` field a
 
 ![The Puck editor inside the EmDash admin: block panel on the left, canvas in the middle, page fields on the right](docs/editor.webp)
 
-Extracted from a production marketing CMS. Every non-obvious decision is explained in the source next to the code it protects.
 
 ## Requirements
 
