@@ -172,48 +172,6 @@ Set `PUCK_API_KEY` in the environment. See [Puck AI](#puck-ai), including the se
 3. The public route renders the page, and the browser console shows no `[puck]` boundary errors.
 4. If the admin sits on "Loading EmDash…", a dependency is missing from `optimizeDeps.include` (check the console for a failed `PluginRegistry` import).
 
-### Migrating from an inline plugin
-
-If the site carries an earlier copy of this code under `src/plugins/puck/`: delete `index.ts`, `BlockPanel.tsx` and `puck-theme.css`; replace the descriptor in `astro.config.mjs` with `puck({ adminEntry })`; reduce `admin.tsx` to the `createPuckAdmin` call above, passing the stylesheets it used to inject as `canvas` / `blockPanel` options; replace local `PuckPage.tsx` / `PuckPageDesigned.tsx`, `boundaries.tsx`, `ErrorBoundary.tsx`, `editable.ts` and `fields/media.tsx` with the package exports; and reduce the AI route to `createPuckAiHandler`, keeping only the site's `context` and `designMode.instructions`.
-
-## Styles in the canvas
-
-Puck renders the editor canvas in an iframe, and its `syncHostStyles` copies only the **admin** document's stylesheets across. Your site's CSS is never there on its own. Pass it in:
-
-```tsx
-import siteCssHref from "../styles/globals.css?url";
-import tokensCss from "../styles/tokens.css?raw";
-
-export const { fields } = createPuckAdmin({
-  config,
-  canvas: {
-    stylesheets: [siteCssHref],
-    css: tokensCss,
-    colorScheme: "light",
-  },
-});
-```
-
-Three things here cost real debugging time:
-
-**Tailwind must go in compiled, as a `<link>`.** The admin is itself a Tailwind app, so utilities the two builds happen to share resolve while every site-specific one silently does not (`max-w-7xl` computed to `max-width: none`, `text-slate-900` to the admin's near-white). Sections come out structurally right and visually wrong. And the Tailwind entry cannot be `?raw`: that returns the unprocessed source, whose first line is `@import "tailwindcss"`, which no browser can resolve.
-
-**`?url` is right for a build and wrong in dev, for project source.** Vite's dev server answers a `?url` import of your own CSS with a JS module, and a `<link rel="stylesheet">` pointing at that loads nothing. `?direct` is the dev form that serves real `text/css`, and it does not survive a build. So pick one at bundle time:
-
-```ts
-export const SITE_CSS_HREF = import.meta.env.DEV
-  ? "/src/styles/globals.css?direct"
-  : siteCssHref;
-```
-
-Prebuilt package assets (this package's own sheets, Puck's) do not need this.
-
-**Pin `colorScheme` on a light-only site whose tokens use `light-dark()`.** Otherwise a machine set to dark mode paints the canvas body dark behind sections designed for a light page.
-
-Also on by default: `unlockScroll`. Puck pins the canvas body with inline `overflow: hidden` plus a fixed pixel height, and the frame is `height: 100%`, so a document taller than the viewport cannot be scrolled and the Outline panel becomes the only way around it. The widget clears that.
-
-The block panel's preview iframe takes the same styles by default; pass `blockPanel: { ... }` to override, or `blockPanel: false` to keep Puck's stock drawer.
-
 ## Starter blocks
 
 `emdash-plugin-puck/blocks` ships ten composable blocks in two categories: **Layout** (Grid, Flex, Space) and **Content** (Heading, Text, Prose, Card, Stats, Logos, Button). Every block carries a parent-aware `layout` field (column span inside a Grid, grow inside a Flex, vertical padding elsewhere), inline-editable copy, closed token selects instead of free numbers, and Puck AI instructions.
