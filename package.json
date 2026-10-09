@@ -1,6 +1,6 @@
 {
 	"name": "emdash-plugin-puck",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "The Puck visual editor as an EmDash field widget: edit any json field as a page layout, render it on the public site, pick images from the EmDash media library, and optionally wire up Puck AI.",
 	"type": "module",
 	"license": "MIT",
@@ -78,7 +78,7 @@
 		"@puckeditor/core": "^0.23.0",
 		"@puckeditor/plugin-ai": "^0.8.0",
 		"astro": "^5.0.0 || ^6.0.0 || ^7.0.0",
-		"emdash": ">=0.35.0 <0.37.0",
+		"emdash": ">=0.35.0 <2.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0"
 	},
@@ -101,7 +101,7 @@
 		"@types/react": "^18.3.27",
 		"@types/react-dom": "^18.3.7",
 		"astro": "^7.0.0",
-		"emdash": "^0.36.0",
+		"emdash": "^1.2.0",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"tsdown": "^0.23.0",
