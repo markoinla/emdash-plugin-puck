@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- Supports EmDash 1.x: the `emdash` peer range is now `>=0.35.0 <2.0.0`,
+  and the plugin builds and type-checks against EmDash 1.2.
+- `mediaField(label, hint, { kind: "video" })` picks videos: the library lists
+  only `video/*` media, uploads accept only video files, and thumbnails
+  render as a muted first frame. `kind` defaults to `"image"`, so existing
+  fields are unchanged. `MediaFieldOptions` and `MediaKind` are exported from
+  `emdash-plugin-puck/fields`.
+- The media name index now covers every kind of media, so a video value shows
+  its filename instead of the URL's last segment.
+
 ## 0.2.0
 
 - `emdash-plugin-puck/blocks`: `createBlocks()`, a starter kit of ten

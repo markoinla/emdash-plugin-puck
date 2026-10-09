@@ -7,7 +7,7 @@ It registers one field widget, `puck:canvas`, that takes over any `json` field a
 - Full-screen editor overlay with Cancel / Save layout and an unsaved-changes guard
 - A searchable block panel with live hover previews, rendered from each block's real `defaultProps`
 - Puck's chrome themed onto the EmDash admin's design tokens, so it follows the admin's light and dark mode
-- `mediaField()`: the EmDash media library (browse, search, upload) as a Puck field
+- `mediaField()`: the EmDash media library (browse, search, upload) as a Puck field, for images or videos
 - A starter kit of ten composable blocks (Grid, Flex, Space, Heading, Text, Prose, Card, Stats, Logos, Button), ported from Puck's demo app
 - Public rendering with per-section error boundaries, so one broken block costs one section and not the page
 - Optional Puck AI: the chat panel in the editor, plus the authenticated Puck Cloud route behind it
@@ -19,7 +19,7 @@ It registers one field widget, `puck:canvas`, that takes over any `json` field a
 
 | | |
 | --- | --- |
-| EmDash | `>=0.35 <0.37` |
+| EmDash | `>=0.35 <2` (tested on 0.36 and 1.2) |
 | Puck | `@puckeditor/core` 0.23 |
 | React | 18 or 19 |
 | Astro | 5, 6 or 7 (the AI route is an Astro `APIRoute`) |
@@ -206,7 +206,7 @@ export const { fields } = createPuckAdmin({ config, blockPanel: { css: blocksCss
 
 ## Media
 
-Replace the plain URL text box on every image prop:
+Replace the plain URL text box on every image or video prop:
 
 ```ts
 import { mediaField } from "emdash-plugin-puck/fields";
@@ -214,6 +214,7 @@ import { mediaField } from "emdash-plugin-puck/fields";
 fields: {
   image: mediaField("Image"),
   logo: mediaField("Logo", "Empty renders the name as a wordmark"),
+  clip: mediaField("Video", undefined, { kind: "video" }),
 }
 ```
 

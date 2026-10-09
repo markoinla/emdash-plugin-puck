@@ -1,7 +1,7 @@
 /**
  * `mediaField` -- the EmDash media library, as a Puck field.
  *
- * Replaces the plain URL text box on every image prop with the browse /
+ * Replaces the plain URL text box on every image or video prop with the browse /
  * search / upload picker authors already know from the EmDash admin, while
  * storing exactly what a text field would store: a URL string. Components and
  * renderers are untouched by the swap; changing a field is a one-line edit at
@@ -121,15 +121,18 @@ function messageOf(error: unknown, fallback: string): string {
 	return error instanceof Error && error.message ? error.message : fallback;
 }
 
+/**
+ * One page of the library. `mimeType` is a prefix filter; pass `""` for every
+ * kind of media, which the name index does so a value of any kind gets a label.
+ */
 async function fetchMedia(
 	query: string,
 	cursor?: string,
 	limit: number = PAGE_SIZE,
+	mimeType = "image/",
 ): Promise<MediaPage> {
-	const params = new URLSearchParams({
-		mimeType: "image/",
-		limit: String(limit),
-	});
+	const params = new URLSearchParams({ limit: String(limit) });
+	if (mimeType) params.set("mimeType", mimeType);
 	if (query) params.set("q", query);
 	if (cursor) params.set("cursor", cursor);
 
@@ -279,7 +282,7 @@ async function ensureNameIndex(): Promise<void> {
 		nameIndexPromise = (async () => {
 			let cursor: string | undefined;
 			for (let page = 0; page < INDEX_MAX_PAGES; page += 1) {
-				const result = await fetchMedia("", cursor, INDEX_PAGE_SIZE);
+				const result = await fetchMedia("", cursor, INDEX_PAGE_SIZE, "");
 				if (!result.nextCursor) return;
 				cursor = result.nextCursor;
 			}
@@ -728,16 +731,49 @@ const styles: Record<string, React.CSSProperties> = {
 	},
 };
 
-/** First image in a drag payload or file input, ignoring anything else dropped. */
-function firstImageFile(files: FileList | null): File | null {
+/** What a media field picks, previews and accepts on upload. */
+export type MediaKind = "image" | "video";
+
+export interface MediaFieldOptions {
+	/** Which media the picker lists, accepts on upload, and previews. Default `"image"`. */
+	kind?: MediaKind;
+}
+
+/** First file of `kind` in a drag payload or file input, ignoring anything else dropped. */
+function firstMediaFile(files: FileList | null, kind: MediaKind): File | null {
 	if (!files) return null;
 	for (const file of Array.from(files)) {
-		if (file.type.startsWith("image/")) return file;
+		if (file.type.startsWith(`${kind}/`)) return file;
 	}
 	return null;
 }
 
+function article(kind: MediaKind): string {
+	return kind === "image" ? "an image" : "a video";
+}
+
+/** A muted, metadata-only `<video>` shows a first-frame thumbnail without downloading the clip. */
+function Thumbnail({
+	kind,
+	src,
+	style,
+	lazy = false,
+}: {
+	kind: MediaKind;
+	src: string;
+	style: React.CSSProperties;
+	lazy?: boolean;
+}): React.JSX.Element {
+	if (kind === "video") {
+		return <video src={src} muted playsInline preload="metadata" style={style} />;
+	}
+	return (
+		<img src={src} alt="" loading={lazy ? "lazy" : undefined} decoding="async" style={style} />
+	);
+}
+
 interface MediaPickerModalProps {
+	kind: MediaKind;
 	initialValue: string;
 	onClose: () => void;
 	onSelect: (url: string) => void;
@@ -750,10 +786,13 @@ interface MediaPickerModalProps {
  * and scroll-trap a dialog rendered in place.
  */
 function MediaPickerModal({
+	kind,
 	initialValue,
 	onClose,
 	onSelect,
 }: MediaPickerModalProps): React.JSX.Element {
+	const mimeType = `${kind}/`;
+	const cacheKey = (search: string): string => `${kind}:${search}`;
 	const [query, setQuery] = React.useState("");
 	const [term, setTerm] = React.useState("");
 	const [items, setItems] = React.useState<MediaItem[]>([]);
@@ -784,7 +823,7 @@ function MediaPickerModal({
 	// then replace it with the network result. A cache hit means no spinner.
 	React.useEffect(() => {
 		let cancelled = false;
-		const cached = firstPageCache.get(term);
+		const cached = firstPageCache.get(cacheKey(term));
 
 		if (cached) {
 			setItems(cached.items);
@@ -799,9 +838,9 @@ function MediaPickerModal({
 
 		void (async () => {
 			try {
-				const page = await fetchMedia(term);
+				const page = await fetchMedia(term, undefined, PAGE_SIZE, mimeType);
 				if (cancelled) return;
-				firstPageCache.set(term, page);
+				firstPageCache.set(cacheKey(term), page);
 				setItems(page.items);
 				setNextCursor(page.nextCursor);
 			} catch (caught) {
@@ -822,7 +861,7 @@ function MediaPickerModal({
 		if (!nextCursor || loadingMore) return;
 		setLoadingMore(true);
 		try {
-			const page = await fetchMedia(term, nextCursor);
+			const page = await fetchMedia(term, nextCursor, PAGE_SIZE, mimeType);
 			setItems((previous) => [...previous, ...page.items]);
 			setNextCursor(page.nextCursor);
 		} catch (caught) {
@@ -886,7 +925,7 @@ function MediaPickerModal({
 					event.preventDefault();
 					dragDepth.current = 0;
 					setDragging(false);
-					void runUpload(firstImageFile(event.dataTransfer.files));
+					void runUpload(firstMediaFile(event.dataTransfer.files, kind));
 				}}>
 				<div style={styles.dialogHeader}>
 					<h2 style={styles.dialogTitle}>Media library</h2>
@@ -931,13 +970,7 @@ function MediaPickerModal({
 											onClick={() => setSelected(item.url)}
 											onDoubleClick={() => confirm(item.url)}>
 											<span style={styles.tileThumb}>
-												<img
-													src={item.url}
-													alt=""
-													loading="lazy"
-													decoding="async"
-													style={styles.tileImg}
-												/>
+												<Thumbnail kind={kind} src={item.url} style={styles.tileImg} lazy />
 											</span>
 											<span style={styles.tileMeta}>
 												<span style={styles.tileName} title={item.filename}>
@@ -954,7 +987,7 @@ function MediaPickerModal({
 						<p style={styles.status}>
 							{term
 								? `Nothing in the library matches "${term}".`
-								: "The media library has no images yet."}
+								: `The media library has no ${kind}s yet.`}
 						</p>
 					)}
 
@@ -974,7 +1007,7 @@ function MediaPickerModal({
 						</span>
 					) : (
 						<span style={styles.footerNote}>
-							{selected ? selectedName : "Select an image, or drop a file to upload."}
+							{selected ? selectedName : `Select ${article(kind)}, or drop a file to upload.`}
 						</span>
 					)}
 					<Button type="button" variant="secondary" onClick={onClose}>
@@ -996,10 +1029,10 @@ function MediaPickerModal({
 				<input
 					ref={fileRef}
 					type="file"
-					accept="image/*"
+					accept={`${kind}/*`}
 					style={styles.srOnly}
 					onChange={(event) => {
-						void runUpload(firstImageFile(event.currentTarget.files));
+						void runUpload(firstMediaFile(event.currentTarget.files, kind));
 						event.currentTarget.value = "";
 					}}
 				/>
@@ -1010,6 +1043,7 @@ function MediaPickerModal({
 }
 
 interface MediaFieldControlProps {
+	kind: MediaKind;
 	id: string;
 	label: string;
 	hint?: string;
@@ -1029,6 +1063,7 @@ interface MediaFieldControlProps {
  * regression over the text field it replaces.
  */
 function MediaFieldControl({
+	kind,
 	id,
 	label,
 	hint,
@@ -1045,7 +1080,7 @@ function MediaFieldControl({
 	const dragDepth = React.useRef(0);
 
 	const handleDrop = async (files: FileList | null): Promise<void> => {
-		const file = firstImageFile(files);
+		const file = firstMediaFile(files, kind);
 		if (!file || readOnly) return;
 		setUploading(true);
 		setError(null);
@@ -1090,7 +1125,7 @@ function MediaFieldControl({
 				{value ? (
 					<div style={styles.filled}>
 						<span style={styles.thumb}>
-							<img src={value} alt="" decoding="async" style={styles.thumbImg} />
+							<Thumbnail kind={kind} src={value} style={styles.thumbImg} />
 						</span>
 						<span style={styles.filledMeta}>
 							<span style={styles.filledName} title={value}>
@@ -1111,7 +1146,7 @@ function MediaFieldControl({
 						<ImageIcon />
 						<span style={styles.emptyText}>
 							<span>
-								{uploading ? "Uploading…" : dragging ? "Drop to upload" : "Choose an image"}
+								{uploading ? "Uploading…" : dragging ? "Drop to upload" : `Choose ${article(kind)}`}
 							</span>
 							<span style={styles.emptyHint}>Browse the media library, or drop a file</span>
 						</span>
@@ -1122,7 +1157,7 @@ function MediaFieldControl({
 					<input
 						type="text"
 						style={styles.urlInput}
-						placeholder="https://example.com/image.png"
+						placeholder={kind === "video" ? "https://example.com/clip.mp4" : "https://example.com/image.png"}
 						value={value}
 						readOnly={readOnly}
 						onChange={(event) => onChange(event.currentTarget.value)}
@@ -1160,6 +1195,7 @@ function MediaFieldControl({
 
 			{open && (
 				<MediaPickerModal
+					kind={kind}
 					initialValue={value}
 					onClose={() => setOpen(false)}
 					onSelect={onChange}
@@ -1170,12 +1206,13 @@ function MediaFieldControl({
 }
 
 /**
- * Build a media-library-backed field for an image prop.
+ * Build a media-library-backed field for an image or video prop.
  *
- * Drop-in for `{ type: "text" }` on any prop holding an image URL:
+ * Drop-in for `{ type: "text" }` on any prop holding a media URL:
  *
  *     image: mediaField("Image"),
  *     logo: mediaField("Logo", "Empty renders the name as a wordmark"),
+ *     clip: mediaField("Video", undefined, { kind: "video" }),
  *
  * `hint` replaces what a text field would have said in `placeholder`, since a
  * picker has no placeholder to put it in.
@@ -1189,7 +1226,9 @@ function MediaFieldControl({
 export function mediaField<Value extends string | undefined = string>(
 	label: string,
 	hint?: string,
+	options: MediaFieldOptions = {},
 ): CustomField<Value> {
+	const kind = options.kind ?? "image";
 	return {
 		type: "custom",
 		label,
@@ -1212,10 +1251,11 @@ export function mediaField<Value extends string | undefined = string>(
 			instructions:
 				"An EmDash media library URL. Never invent one: only reuse a URL " +
 				"that already appears elsewhere in this document, or write an empty " +
-				"string to leave the image unset for an author to pick.",
+				`string to leave the ${kind} unset for an author to pick.`,
 		},
 		render: ({ id, value, onChange, readOnly }) => (
 			<MediaFieldControl
+				kind={kind}
 				id={id}
 				label={label}
 				hint={hint}
